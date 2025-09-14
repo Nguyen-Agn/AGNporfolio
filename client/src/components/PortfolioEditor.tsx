@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,10 @@ import {
   Plus,
   Settings
 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import type { Portfolio, InsertPortfolio } from "@shared/schema";
 import A4Canvas from "./A4Canvas";
 
 interface ContentBlock {
@@ -23,10 +27,54 @@ interface ContentBlock {
   style?: Record<string, any>;
 }
 
-export default function PortfolioEditor() {
-  const [portfolioTitle, setPortfolioTitle] = useState("My Portfolio");
+interface PortfolioEditorProps {
+  portfolioId?: string;
+}
+
+export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [zoom, setZoom] = useState(100);
+  const [isCreating, setIsCreating] = useState(!portfolioId);
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    template: "default"
+  });
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Load existing portfolio if editing
+  const { data: portfolio, isLoading } = useQuery<Portfolio>({
+    queryKey: ["/api/portfolios", portfolioId],
+    enabled: !!portfolioId,
+  });
+
+  // Create portfolio mutation
+  const createMutation = useMutation({
+    mutationFn: async (data: InsertPortfolio) => {
+      const response = await apiRequest("POST", "/api/portfolios", data);
+      const portfolio = await response.json();
+      return portfolio as Portfolio;
+    },
+    onSuccess: (newPortfolio: any) => {
+      setIsCreating(false);
+      toast({
+        title: "Thành công",
+        description: "Portfolio đã được tạo thành công",
+      });
+      // Update URL to edit mode
+      window.history.pushState(null, "", `/editor/${newPortfolio.id}`);
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolios"] });
+    },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể tạo portfolio. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    },
+  });
   
   // todo: remove mock functionality
   const [contentBlocks] = useState<ContentBlock[]>([
@@ -67,6 +115,28 @@ export default function PortfolioEditor() {
     console.log(`Tool ${toolId} selected`);
   };
 
+  const handleCreateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title.trim()) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng nhập tiêu đề portfolio",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const portfolioData: InsertPortfolio = {
+      title: formData.title,
+      description: formData.description || undefined,
+      template: formData.template,
+      content: {},
+      isPublished: "false"
+    };
+    
+    createMutation.mutate(portfolioData);
+  };
+
   const handleSave = () => {
     console.log("Portfolio saved");
   };
@@ -76,7 +146,7 @@ export default function PortfolioEditor() {
   };
 
   const handleBack = () => {
-    console.log("Back to dashboard");
+    window.location.href = "/";
   };
 
   const renderCanvasContent = () => (
@@ -100,6 +170,96 @@ export default function PortfolioEditor() {
     </div>
   );
 
+  // Show creation form if creating new portfolio
+  if (isCreating) {
+    return (
+      <div className="h-screen flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b bg-background">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={handleBack} data-testid="button-back">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <h1 className="font-heading text-xl font-semibold">Tạo Portfolio Mới</h1>
+          </div>
+        </div>
+        
+        <div className="flex-1 flex items-center justify-center p-8">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="font-heading text-center">Thông Tin Portfolio</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleCreateSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Tiêu đề *</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Nhập tiêu đề portfolio"
+                    data-testid="input-portfolio-title"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="description">Mô tả</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Mô tả ngắn về portfolio của bạn"
+                    data-testid="textarea-portfolio-description"
+                    rows={3}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="template">Mẫu thiết kế</Label>
+                  <select
+                    id="template"
+                    value={formData.template}
+                    onChange={(e) => setFormData(prev => ({ ...prev, template: e.target.value }))}
+                    className="w-full p-2 border border-input rounded-md bg-background"
+                    data-testid="select-portfolio-template"
+                  >
+                    <option value="default">Mặc định</option>
+                    <option value="creative">Sáng Tạo</option>
+                    <option value="professional">Chuyên Nghiệp</option>
+                    <option value="photography">Nhiếp Ảnh</option>
+                  </select>
+                </div>
+                
+                <div className="flex gap-2 pt-4">
+                  <Button type="button" variant="outline" onClick={handleBack} className="flex-1">
+                    Hủy
+                  </Button>
+                  <Button type="submit" className="flex-1" disabled={createMutation.isPending} data-testid="button-create-portfolio">
+                    {createMutation.isPending ? "Tạo..." : "Tạo Portfolio"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+  
+  // Show loading state for editing mode
+  if (portfolioId && isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Đang tải portfolio...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Show editor UI for editing mode
   return (
     <div className="h-screen flex flex-col">
       {/* Top Toolbar */}
@@ -114,8 +274,16 @@ export default function PortfolioEditor() {
             <Label htmlFor="portfolio-title" className="sr-only">Portfolio Title</Label>
             <Input
               id="portfolio-title"
-              value={portfolioTitle}
-              onChange={(e) => setPortfolioTitle(e.target.value)}
+              value={portfolio?.title || formData.title || "Portfolio"}
+              onChange={(e) => {
+                if (portfolio) {
+                  // Handle editing mode
+                  console.log("Update portfolio title", e.target.value);
+                } else {
+                  // Handle creation mode
+                  setFormData(prev => ({ ...prev, title: e.target.value }));
+                }
+              }}
               className="font-heading font-semibold border-none px-2 py-1 h-auto bg-transparent focus-visible:bg-background focus-visible:border-input"
               data-testid="input-portfolio-title"
             />
