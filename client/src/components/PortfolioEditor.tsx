@@ -18,14 +18,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Portfolio, InsertPortfolio } from "@shared/schema";
+import { getTemplateById, getAllTemplates, type ContentBlock, type TemplateConfig } from "@/lib/templates";
 import A4Canvas from "./A4Canvas";
 
-interface ContentBlock {
-  id: string;
-  type: 'text' | 'image' | 'section';
-  content: string;
-  style?: Record<string, any>;
-}
+// ContentBlock interface is now imported from templates
 
 interface PortfolioEditorProps {
   portfolioId?: string;
@@ -35,6 +31,8 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [zoom, setZoom] = useState(100);
   const [isCreating, setIsCreating] = useState(!portfolioId);
+  const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]);
+  const [currentTemplate, setCurrentTemplate] = useState<TemplateConfig | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -49,6 +47,40 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
     queryKey: ["/api/portfolios", portfolioId],
     enabled: !!portfolioId,
   });
+  
+  // Load template content when template changes
+  useEffect(() => {
+    if (formData.template) {
+      const template = getTemplateById(formData.template);
+      setCurrentTemplate(template);
+      if (isCreating) {
+        setContentBlocks(template.defaultBlocks);
+      }
+    }
+  }, [formData.template, isCreating]);
+  
+  // Load portfolio content when portfolio is loaded
+  useEffect(() => {
+    if (portfolio && !isCreating) {
+      setCurrentTemplate(getTemplateById(portfolio.template || 'default'));
+      
+      // Parse content from portfolio or use template defaults
+      try {
+        const portfolioContent = portfolio.content as any;
+        if (portfolioContent && portfolioContent.blocks && portfolioContent.blocks.length > 0) {
+          setContentBlocks(portfolioContent.blocks);
+        } else {
+          // Use template defaults if no content exists
+          const template = getTemplateById(portfolio.template || 'default');
+          setContentBlocks(template.defaultBlocks);
+        }
+      } catch (error) {
+        console.error('Error parsing portfolio content:', error);
+        const template = getTemplateById(portfolio.template || 'default');
+        setContentBlocks(template.defaultBlocks);
+      }
+    }
+  }, [portfolio, isCreating]);
 
   // Create portfolio mutation
   const createMutation = useMutation({
@@ -76,33 +108,7 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
     },
   });
   
-  // todo: remove mock functionality
-  const [contentBlocks] = useState<ContentBlock[]>([
-    {
-      id: "1",
-      type: "text",
-      content: "John Doe",
-      style: { fontSize: "32px", fontWeight: "bold", textAlign: "center" }
-    },
-    {
-      id: "2", 
-      type: "text",
-      content: "Creative Designer & Developer",
-      style: { fontSize: "18px", color: "#8B5CF6", textAlign: "center", marginBottom: "20px" }
-    },
-    {
-      id: "3",
-      type: "section",
-      content: "About Me",
-      style: { fontSize: "20px", fontWeight: "600", marginBottom: "10px" }
-    },
-    {
-      id: "4",
-      type: "text", 
-      content: "Passionate creative with 5+ years of experience in digital design and front-end development. I love creating beautiful, functional experiences that make a difference.",
-      style: { fontSize: "14px", lineHeight: "1.6", marginBottom: "20px" }
-    }
-  ]);
+  // Content blocks are now managed by template system
 
   const tools = [
     { id: 'text', icon: Type, label: 'Text' },
@@ -130,7 +136,10 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
       title: formData.title,
       description: formData.description || undefined,
       template: formData.template,
-      content: {},
+      content: {
+        blocks: contentBlocks,
+        template: formData.template
+      },
       isPublished: "false"
     };
     
@@ -224,11 +233,17 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
                     className="w-full p-2 border border-input rounded-md bg-background"
                     data-testid="select-portfolio-template"
                   >
-                    <option value="default">Mặc định</option>
-                    <option value="creative">Sáng Tạo</option>
-                    <option value="professional">Chuyên Nghiệp</option>
-                    <option value="photography">Nhiếp Ảnh</option>
+                    {getAllTemplates().map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {template.name}
+                      </option>
+                    ))}
                   </select>
+                  {currentTemplate && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {currentTemplate.description}
+                    </p>
+                  )}
                 </div>
                 
                 <div className="flex gap-2 pt-4">
