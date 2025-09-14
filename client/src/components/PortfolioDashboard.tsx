@@ -9,71 +9,86 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-interface Portfolio {
-  id: string;
-  title: string;
-  description: string;
-  lastModified: string;
-  template: string;
-  isPublished: boolean;
-}
-
-// todo: remove mock functionality
-const mockPortfolios: Portfolio[] = [
-  {
-    id: "1",
-    title: "Portfolio Nhà Thiết Kế Sáng Tạo",
-    description: "Trình bày các tác phẩm UI/UX và thiết kế đồ họa của tôi",
-    lastModified: "2 giờ trước",
-    template: "Sáng Tạo",
-    isPublished: true
-  },
-  {
-    id: "2", 
-    title: "Bộ Sưu Tập Nhiếp Ảnh",
-    description: "Nhiếp ảnh chuyên nghiệp và kể chuyện bằng hình ảnh",
-    lastModified: "1 ngày trước",
-    template: "Nhiếp Ảnh",
-    isPublished: false
-  },
-  {
-    id: "3",
-    title: "Portfolio Lập Trình Viên",
-    description: "Các dự án phát triển full-stack và thành tựu",
-    lastModified: "3 ngày trước", 
-    template: "Chuyên Nghiệp",
-    isPublished: true
-  }
-];
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import type { Portfolio } from "@shared/schema";
 
 export default function PortfolioDashboard() {
-  const [portfolios] = useState<Portfolio[]>(mockPortfolios);
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch portfolios from API
+  const { data: portfolios = [], isLoading } = useQuery<Portfolio[]>({
+    queryKey: ["/api/portfolios"],
+  });
+
+  // Delete portfolio mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest(`/api/portfolios/${id}`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolios"] });
+      toast({
+        title: "Thành công",
+        description: "Portfolio đã được xóa thành công",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể xóa portfolio. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const filteredPortfolios = portfolios.filter(portfolio =>
     portfolio.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    portfolio.description.toLowerCase().includes(searchQuery.toLowerCase())
+    (portfolio.description && portfolio.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  const formatDate = (dateString: string | Date) => {
+    if (!dateString) return "chưa xác định";
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return "vừa xong";
+    if (diffInHours < 24) return `${diffInHours} giờ trước`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 30) return `${diffInDays} ngày trước`;
+    
+    return date.toLocaleDateString("vi-VN");
+  };
+
   const handleCreateNew = () => {
-    console.log("Create new portfolio triggered");
+    window.location.href = "/editor";
   };
 
   const handleEdit = (id: string) => {
-    console.log(`Edit portfolio ${id} triggered`);
+    window.location.href = `/editor/${id}`;
   };
 
   const handleDuplicate = (id: string) => {
     console.log(`Duplicate portfolio ${id} triggered`);
+    toast({
+      title: "Chức năng đang phát triển",
+      description: "Tính năng sao chép portfolio sẽ có sớm",
+    });
   };
 
   const handleDelete = (id: string) => {
-    console.log(`Delete portfolio ${id} triggered`);
+    if (confirm("Bạn có chắc chắn muốn xóa portfolio này?")) {
+      deleteMutation.mutate(id);
+    }
   };
 
   const handleView = (id: string) => {
-    console.log(`View portfolio ${id} triggered`);
+    window.location.href = `/portfolio/${id}`;
   };
 
   return (
@@ -103,8 +118,25 @@ export default function PortfolioDashboard() {
         />
       </div>
 
-      {/* Portfolios Grid */}
-      {filteredPortfolios.length === 0 ? (
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-4 bg-muted rounded w-3/4"></div>
+                <div className="h-3 bg-muted rounded w-1/2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="h-3 bg-muted rounded"></div>
+                  <div className="h-3 bg-muted rounded w-2/3"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : filteredPortfolios.length === 0 ? (
         <Card className="text-center py-12">
           <CardContent>
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
@@ -130,7 +162,7 @@ export default function PortfolioDashboard() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <CardTitle className="font-heading text-lg truncate">{portfolio.title}</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">{portfolio.template} Template</p>
+                    <p className="text-sm text-muted-foreground mt-1">{portfolio.template || 'Mặc định'} Template</p>
                   </div>
                   
                   <DropdownMenu>
@@ -171,12 +203,12 @@ export default function PortfolioDashboard() {
                 </p>
                 
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Sửa đổi {portfolio.lastModified}</span>
+                  <span>Sửa đổi {formatDate(portfolio.updatedAt || portfolio.createdAt || "")}</span>
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${
-                      portfolio.isPublished ? 'bg-green-500' : 'bg-yellow-500'
+                      portfolio.isPublished === 'true' ? 'bg-green-500' : 'bg-yellow-500'
                     }`} />
-                    <span>{portfolio.isPublished ? 'Đã xuất bản' : 'Bản nháp'}</span>
+                    <span>{portfolio.isPublished === 'true' ? 'Đã xuất bản' : 'Bản nháp'}</span>
                   </div>
                 </div>
                 
