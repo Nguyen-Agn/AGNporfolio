@@ -13,11 +13,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Portfolio, InsertPortfolio } from "@shared/schema";
+import { useLocation } from "wouter";
 
 export default function PortfolioDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   // Fetch portfolios from API
   const { data: portfolios = [], isLoading } = useQuery<Portfolio[]>({
@@ -56,7 +58,7 @@ export default function PortfolioDashboard() {
       const duplicateData: InsertPortfolio = {
         title: `Bản sao - ${original.title}`,
         description: original.description,
-        content: original.content,
+        content: original.content as any,
         template: original.template,
         isPublished: "false"
       };
@@ -120,7 +122,7 @@ export default function PortfolioDashboard() {
   };
 
   const handleView = (id: string) => {
-    window.location.href = `/portfolio/${id}`;
+    setLocation(`/portfolio/${id}`);
   };
 
   return (

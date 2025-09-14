@@ -16,11 +16,13 @@ import {
   Trash2,
   ArrowUp,
   ArrowDown,
-  Home
+  Home,
+  Download
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { exportToPDFWithPreview } from "@/lib/print";
 import type { Portfolio, InsertPortfolio } from "@shared/schema";
 import { getTemplateById, getAllTemplates, type ContentBlock, type TemplateConfig } from "@/lib/templates";
 import A4Canvas from "./A4Canvas";
@@ -33,14 +35,21 @@ interface PortfolioEditorProps {
 }
 
 export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
-  const [selectedTool, setSelectedTool] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(100);
-  const [isCreating, setIsCreating] = useState(!portfolioId);
-  const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]);
-  const [currentTemplate, setCurrentTemplate] = useState<TemplateConfig | null>(null);
-  const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
-  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
+  // UI State Management
+  const [selectedTool, setSelectedTool] = useState<string | null>(null); // Currently selected design tool
+  const [zoom, setZoom] = useState(100); // Canvas zoom level (25% - 200%)
+  const [isCreating, setIsCreating] = useState(!portfolioId); // Whether creating new or editing existing
+  
+  // Content and Template Management
+  const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]); // Array of content blocks on canvas
+  const [currentTemplate, setCurrentTemplate] = useState<TemplateConfig | null>(null); // Current template configuration
+  
+  // Editor State Management
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null); // Block being inline-edited
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null); // Block selected for properties editing
+  const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit'); // Toggle between editing and preview modes
+  
+  // Form data for portfolio creation
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -156,7 +165,14 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
   };
 
   // Function to add new content block
+  /**
+   * Adds a new content block to the canvas
+   * @param type - Type of block: 'text' for paragraphs, 'section' for headers, 'image' for images
+   * @param defaultContent - Initial content text for the block
+   * @param defaultStyle - Initial CSS styles as object (fontSize, color, etc.)
+   */
   const addContentBlock = (type: 'text' | 'section' | 'image', defaultContent: string = '', defaultStyle: Record<string, any> = {}) => {
+    // Generate unique ID using timestamp and random string
     const newBlock: ContentBlock = {
       id: `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type,
@@ -164,22 +180,34 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
       style: defaultStyle
     };
     
+    // Add to blocks array and auto-select for immediate editing
     setContentBlocks(prev => [...prev, newBlock]);
     setSelectedBlockId(newBlock.id);
   };
 
-  // Function to update block style
+  /**
+   * Updates CSS styles for a specific content block
+   * @param blockId - Unique identifier of the block to update
+   * @param newStyle - Object containing CSS properties to merge (fontSize, color, etc.)
+   */
   const updateBlockStyle = (blockId: string, newStyle: Record<string, any>) => {
     setContentBlocks(prev => 
       prev.map(block => 
-        block.id === blockId ? { ...block, style: { ...block.style, ...newStyle } } : block
+        block.id === blockId 
+          ? { ...block, style: { ...block.style, ...newStyle } } // Merge new styles with existing
+          : block
       )
     );
   };
 
-  // Function to delete content block
+  /**
+   * Removes a content block from the canvas and cleans up related state
+   * @param blockId - Unique identifier of the block to delete
+   */
   const deleteContentBlock = (blockId: string) => {
     setContentBlocks(prev => prev.filter(block => block.id !== blockId));
+    
+    // Clean up UI state if deleted block was selected or being edited
     if (selectedBlockId === blockId) {
       setSelectedBlockId(null);
     }
@@ -239,6 +267,14 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
     setLocation("/");
   };
 
+  /**
+   * Handles PDF export using shared print utility
+   * Forces preview mode for clean output without edit overlays
+   */
+  const handleExportPDF = () => {
+    exportToPDFWithPreview(viewMode, setViewMode);
+  };
+
   // Function to update content block
   const updateContentBlock = (blockId: string, newContent: string) => {
     setContentBlocks(prev => 
@@ -270,14 +306,19 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
   // Get selected block
   const selectedBlock = selectedBlockId ? contentBlocks.find(block => block.id === selectedBlockId) : null;
 
-  // Function to handle property changes
+  /**
+   * Handles property changes from the properties panel
+   * @param property - Property name ('content', 'fontSize', 'color', etc.)
+   * @param value - New value for the property
+   */
   const handlePropertyChange = (property: string, value: string) => {
     if (!selectedBlockId) return;
     
+    // Different handling for content vs style properties
     if (property === 'content') {
-      updateContentBlock(selectedBlockId, value);
+      updateContentBlock(selectedBlockId, value); // Update block content
     } else {
-      updateBlockStyle(selectedBlockId, { [property]: value });
+      updateBlockStyle(selectedBlockId, { [property]: value }); // Update block CSS style
     }
   };
 
@@ -291,7 +332,7 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
           <div
             key={block.id}
             style={block.style}
-            className={`${viewMode === 'edit' ? 'cursor-pointer' : ''} rounded transition-all ${
+            className={`content-block ${viewMode === 'edit' ? 'cursor-pointer' : ''} rounded transition-all ${
               isSelected && viewMode === 'edit'
                 ? "outline outline-2 outline-primary bg-primary/5" 
                 : viewMode === 'edit' ? "hover:outline hover:outline-2 hover:outline-primary/50" : ""
@@ -469,7 +510,7 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
   return (
     <div className="h-screen flex flex-col">
       {/* Top Toolbar */}
-      <div className="flex items-center justify-between p-4 border-b bg-background">
+      <div className="flex items-center justify-between p-4 border-b bg-background no-print">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={handleBack} data-testid="button-back">
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -505,6 +546,10 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
             <Eye className="h-4 w-4 mr-2" />
             {viewMode === 'preview' ? 'Edit' : 'Preview'}
           </Button>
+          <Button variant="outline" onClick={handleExportPDF} data-testid="button-export-pdf-editor">
+            <Download className="h-4 w-4 mr-2" />
+            Tải PDF
+          </Button>
           <Button 
             onClick={handleSave} 
             data-testid="button-save"
@@ -518,7 +563,7 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar - Tools */}
-        <div className="w-80 border-r bg-card">
+        <div className="w-80 border-r bg-card no-print">
           <div className="p-4">
             <h3 className="font-heading font-semibold mb-4">Design Tools</h3>
             
@@ -589,7 +634,7 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
         </div>
 
         {/* Center - Canvas */}
-        <div className="flex-1">
+        <div className="flex-1 print-area">
           <A4Canvas zoom={zoom} onZoomChange={setZoom}>
             {renderCanvasContent()}
           </A4Canvas>
@@ -597,7 +642,7 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
 
         {/* Right Sidebar - Properties */}
         {viewMode === 'edit' && (
-          <div className="w-80 border-l bg-card">
+          <div className="w-80 border-l bg-card no-print">
             <div className="p-4">
               <div className="flex items-center gap-2 mb-4">
                 <Settings className="h-4 w-4" />

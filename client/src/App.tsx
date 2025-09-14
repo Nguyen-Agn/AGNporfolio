@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Home from "@/pages/Home";
 import Editor from "@/pages/Editor";
+import PortfolioView from "@/pages/PortfolioView";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -20,6 +21,7 @@ function Router() {
         <>
           <Route path="/" component={Home} />
           <Route path="/editor/:id?" component={Editor} />
+          <Route path="/portfolio/:id" component={PortfolioView} />
         </>
       )}
       <Route component={NotFound} />
