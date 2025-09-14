@@ -12,7 +12,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { Portfolio } from "@shared/schema";
+import type { Portfolio, InsertPortfolio } from "@shared/schema";
 
 export default function PortfolioDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -40,6 +40,42 @@ export default function PortfolioDashboard() {
       toast({
         title: "Lỗi",
         description: "Không thể xóa portfolio. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Duplicate portfolio mutation
+  const duplicateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      // First fetch the original portfolio
+      const response = await apiRequest(`/api/portfolios/${id}`, "GET");
+      const original = await response.json() as Portfolio;
+      
+      // Create duplicate data
+      const duplicateData: InsertPortfolio = {
+        title: `Bản sao - ${original.title}`,
+        description: original.description,
+        content: original.content,
+        template: original.template,
+        isPublished: "false"
+      };
+      
+      // Create the duplicate
+      const createResponse = await apiRequest("POST", "/api/portfolios", duplicateData);
+      return await createResponse.json() as Portfolio;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolios"] });
+      toast({
+        title: "Thành công",
+        description: "Portfolio đã được sao chép thành công",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể sao chép portfolio. Vui lòng thử lại.",
         variant: "destructive",
       });
     },
@@ -74,11 +110,7 @@ export default function PortfolioDashboard() {
   };
 
   const handleDuplicate = (id: string) => {
-    console.log(`Duplicate portfolio ${id} triggered`);
-    toast({
-      title: "Chức năng đang phát triển",
-      description: "Tính năng sao chép portfolio sẽ có sớm",
-    });
+    duplicateMutation.mutate(id);
   };
 
   const handleDelete = (id: string) => {

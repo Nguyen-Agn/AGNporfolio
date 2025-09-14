@@ -64,7 +64,7 @@ export default function LandingPage() {
 
         {/* Portfolio Preview */}
         <div className="mt-16 max-w-3xl mx-auto">
-          <Card className="shadow-2xl bg-white">
+          <Card className="shadow-2xl">
             <div className="aspect-[210/297] bg-gradient-to-br from-primary/5 to-accent/5 rounded-t-lg flex items-center justify-center">
               <div className="text-center p-8">
                 <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-primary/20 flex items-center justify-center">
