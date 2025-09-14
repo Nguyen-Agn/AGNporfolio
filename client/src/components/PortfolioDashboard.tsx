@@ -23,26 +23,26 @@ interface Portfolio {
 const mockPortfolios: Portfolio[] = [
   {
     id: "1",
-    title: "Creative Designer Portfolio",
-    description: "Showcasing my UI/UX and graphic design work",
-    lastModified: "2 hours ago",
-    template: "Creative",
+    title: "Portfolio Nhà Thiết Kế Sáng Tạo",
+    description: "Trình bày các tác phẩm UI/UX và thiết kế đồ họa của tôi",
+    lastModified: "2 giờ trước",
+    template: "Sáng Tạo",
     isPublished: true
   },
   {
     id: "2", 
-    title: "Photography Collection",
-    description: "Professional photography and visual storytelling",
-    lastModified: "1 day ago",
-    template: "Photography",
+    title: "Bộ Sưu Tập Nhiếp Ảnh",
+    description: "Nhiếp ảnh chuyên nghiệp và kể chuyện bằng hình ảnh",
+    lastModified: "1 ngày trước",
+    template: "Nhiếp Ảnh",
     isPublished: false
   },
   {
     id: "3",
-    title: "Developer Portfolio",
-    description: "Full-stack development projects and achievements",
-    lastModified: "3 days ago", 
-    template: "Professional",
+    title: "Portfolio Lập Trình Viên",
+    description: "Các dự án phát triển full-stack và thành tựu",
+    lastModified: "3 ngày trước", 
+    template: "Chuyên Nghiệp",
     isPublished: true
   }
 ];
@@ -81,13 +81,13 @@ export default function PortfolioDashboard() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="font-heading text-3xl font-bold mb-2">My Portfolios</h1>
-          <p className="text-muted-foreground">Create and manage your professional portfolios</p>
+          <h1 className="font-heading text-3xl font-bold mb-2">Portfolio Của Tôi</h1>
+          <p className="text-muted-foreground">Tạo và quản lý portfolio chuyên nghiệp của bạn</p>
         </div>
         
         <Button onClick={handleCreateNew} data-testid="button-create-portfolio">
           <Plus className="h-4 w-4 mr-2" />
-          Create Portfolio
+          Tạo Portfolio
         </Button>
       </div>
 
@@ -95,7 +95,7 @@ export default function PortfolioDashboard() {
       <div className="relative mb-8">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search portfolios..."
+          placeholder="Tìm kiếm portfolio..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10"
@@ -110,14 +110,14 @@ export default function PortfolioDashboard() {
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
               <Plus className="h-8 w-8 text-muted-foreground" />
             </div>
-            <h3 className="font-heading font-semibold mb-2">No Portfolios Found</h3>
+            <h3 className="font-heading font-semibold mb-2">Không Tìm Thấy Portfolio</h3>
             <p className="text-muted-foreground mb-4">
-              {searchQuery ? "Try a different search term" : "Create your first portfolio to get started"}
+              {searchQuery ? "Thử từ khóa tìm kiếm khác" : "Tạo portfolio đầu tiên của bạn để bắt đầu"}
             </p>
             {!searchQuery && (
               <Button onClick={handleCreateNew} data-testid="button-create-first-portfolio">
                 <Plus className="h-4 w-4 mr-2" />
-                Create Portfolio
+                Tạo Portfolio
               </Button>
             )}
           </CardContent>
@@ -142,15 +142,15 @@ export default function PortfolioDashboard() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handleView(portfolio.id)} data-testid={`menu-view-${portfolio.id}`}>
                         <Eye className="h-4 w-4 mr-2" />
-                        View
+                        Xem
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleEdit(portfolio.id)} data-testid={`menu-edit-${portfolio.id}`}>
                         <Edit className="h-4 w-4 mr-2" />
-                        Edit
+                        Chỉnh Sửa
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleDuplicate(portfolio.id)} data-testid={`menu-duplicate-${portfolio.id}`}>
                         <Copy className="h-4 w-4 mr-2" />
-                        Duplicate
+                        Sao Chép
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         onClick={() => handleDelete(portfolio.id)} 
@@ -158,7 +158,7 @@ export default function PortfolioDashboard() {
                         data-testid={`menu-delete-${portfolio.id}`}
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
+                        Xóa
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -171,12 +171,12 @@ export default function PortfolioDashboard() {
                 </p>
                 
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Modified {portfolio.lastModified}</span>
+                  <span>Sửa đổi {portfolio.lastModified}</span>
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${
                       portfolio.isPublished ? 'bg-green-500' : 'bg-yellow-500'
                     }`} />
-                    <span>{portfolio.isPublished ? 'Published' : 'Draft'}</span>
+                    <span>{portfolio.isPublished ? 'Đã xuất bản' : 'Bản nháp'}</span>
                   </div>
                 </div>
                 
@@ -189,7 +189,7 @@ export default function PortfolioDashboard() {
                     data-testid={`button-view-${portfolio.id}`}
                   >
                     <Eye className="h-3 w-3 mr-1" />
-                    View
+                    Xem
                   </Button>
                   <Button 
                     size="sm" 
@@ -198,7 +198,7 @@ export default function PortfolioDashboard() {
                     data-testid={`button-edit-${portfolio.id}`}
                   >
                     <Edit className="h-3 w-3 mr-1" />
-                    Edit
+                    Sửa
                   </Button>
                 </div>
               </CardContent>

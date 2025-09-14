@@ -10,23 +10,23 @@ export default function LandingPage() {
   const features = [
     {
       icon: Layout,
-      title: "A4 Design Freedom",
-      description: "Create stunning portfolios with our flexible A4 page design tools. Perfect layouts for any creative field."
+      title: "Thiết Kế A4 Tự Do",
+      description: "Tạo portfolio tuyệt đẹp với công cụ thiết kế trang A4 linh hoạt. Bố cục hoàn hảo cho mọi lĩnh vực sáng tạo."
     },
     {
       icon: Palette,
-      title: "Beautiful Templates",
-      description: "Choose from professionally designed templates or start from scratch. Customize every element to match your style."
+      title: "Mẫu Thiết Kế Đẹp",
+      description: "Chọn từ các mẫu thiết kế chuyên nghiệp hoặc bắt đầu từ đầu. Tùy chỉnh mọi yếu tố theo phong cách của bạn."
     },
     {
       icon: Share2,
-      title: "Easy Sharing",
-      description: "Share your portfolio with a simple link. Perfect for job applications, client presentations, or social media."
+      title: "Chia Sẻ Dễ Dàng",
+      description: "Chia sẻ portfolio của bạn chỉ với một liên kết đơn giản. Hoàn hảo cho việc xin việc, thuyết trình khách hàng."
     },
     {
       icon: Zap,
-      title: "Quick & Intuitive",
-      description: "Drag and drop interface that makes portfolio creation fast and enjoyable. No design experience needed."
+      title: "Nhanh Chóng & Trực Quan",
+      description: "Giao diện kéo thả giúp việc tạo portfolio nhanh chóng và thú vị. Không cần kinh nghiệm thiết kế."
     }
   ];
 
@@ -36,11 +36,11 @@ export default function LandingPage() {
       <div className="container mx-auto px-4 pt-20 pb-16">
         <div className="text-center max-w-4xl mx-auto">
           <h1 className="font-heading text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Create Beautiful Portfolios
+            Tạo Portfolio Đẹp Mắt
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Professional portfolio builder with A4 design flexibility. 
-            Showcase your work beautifully with our intuitive tools.
+            Công cụ tạo portfolio chuyên nghiệp với thiết kế A4 linh hoạt. 
+            Trình bày công việc của bạn một cách đẹp mắt với các công cụ trực quan.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
@@ -49,7 +49,7 @@ export default function LandingPage() {
               data-testid="button-get-started"
               className="text-lg px-8"
             >
-              Get Started Free
+              Bắt Đầu Miễn Phí
             </Button>
             <Button 
               variant="outline" 
@@ -57,7 +57,7 @@ export default function LandingPage() {
               data-testid="button-view-examples"
               className="text-lg px-8"
             >
-              View Examples
+              Xem Ví Dụ
             </Button>
           </div>
         </div>
@@ -98,9 +98,9 @@ export default function LandingPage() {
       <div className="py-16 bg-card/50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="font-heading text-3xl font-bold mb-4">Everything You Need</h2>
+            <h2 className="font-heading text-3xl font-bold mb-4">Mọi Thứ Bạn Cần</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Our platform provides all the tools you need to create stunning portfolios that stand out.
+              Nền tảng của chúng tôi cung cấp tất cả các công cụ bạn cần để tạo portfolio tuyệt đẹp nổi bật.
             </p>
           </div>
           
@@ -125,9 +125,9 @@ export default function LandingPage() {
       {/* CTA Section */}
       <div className="py-16">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="font-heading text-3xl font-bold mb-4">Ready to Build Your Portfolio?</h2>
+          <h2 className="font-heading text-3xl font-bold mb-4">Sẵn Sàng Tạo Portfolio?</h2>
           <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-            Join thousands of creatives who trust our platform to showcase their best work.
+            Tham gia cùng hàng nghìn người sáng tạo tin tưởng nền tảng của chúng tôi để thể hiện tác phẩm tốt nhất.
           </p>
           <Button 
             size="lg" 
@@ -135,7 +135,7 @@ export default function LandingPage() {
             data-testid="button-cta-get-started"
             className="text-lg px-8"
           >
-            Start Creating Today
+            Bắt Đầu Tạo Ngay Hôm Nay
           </Button>
         </div>
       </div>
