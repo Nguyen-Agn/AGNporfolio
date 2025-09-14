@@ -5,6 +5,11 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertPortfolioSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint for testing readiness (no auth required)
+  app.get("/api/health", (req, res) => {
+    res.json({ ok: true, ts: Date.now() });
+  });
+
   // Auth middleware
   await setupAuth(app);
 
