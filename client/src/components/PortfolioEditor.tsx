@@ -12,7 +12,10 @@ import {
   Eye, 
   ArrowLeft,
   Plus,
-  Settings
+  Settings,
+  Trash2,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +38,7 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
   const [currentTemplate, setCurrentTemplate] = useState<TemplateConfig | null>(null);
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -148,6 +152,39 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
     console.log(`Tool ${toolId} selected`);
   };
 
+  // Function to add new content block
+  const addContentBlock = (type: 'text' | 'section' | 'image', defaultContent: string = '', defaultStyle: Record<string, any> = {}) => {
+    const newBlock: ContentBlock = {
+      id: `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type,
+      content: defaultContent,
+      style: defaultStyle
+    };
+    
+    setContentBlocks(prev => [...prev, newBlock]);
+    setSelectedBlockId(newBlock.id);
+  };
+
+  // Function to update block style
+  const updateBlockStyle = (blockId: string, newStyle: Record<string, any>) => {
+    setContentBlocks(prev => 
+      prev.map(block => 
+        block.id === blockId ? { ...block, style: { ...block.style, ...newStyle } } : block
+      )
+    );
+  };
+
+  // Function to delete content block
+  const deleteContentBlock = (blockId: string) => {
+    setContentBlocks(prev => prev.filter(block => block.id !== blockId));
+    if (selectedBlockId === blockId) {
+      setSelectedBlockId(null);
+    }
+    if (editingBlockId === blockId) {
+      setEditingBlockId(null);
+    }
+  };
+
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) {
@@ -190,7 +227,9 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
   };
 
   const handlePreview = () => {
-    console.log("Preview portfolio");
+    setViewMode(viewMode === 'preview' ? 'edit' : 'preview');
+    setEditingBlockId(null);
+    setSelectedBlockId(null);
   };
 
   const handleBack = () => {
@@ -225,6 +264,20 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
     setEditingBlockId(null);
   };
 
+  // Get selected block
+  const selectedBlock = selectedBlockId ? contentBlocks.find(block => block.id === selectedBlockId) : null;
+
+  // Function to handle property changes
+  const handlePropertyChange = (property: string, value: string) => {
+    if (!selectedBlockId) return;
+    
+    if (property === 'content') {
+      updateContentBlock(selectedBlockId, value);
+    } else {
+      updateBlockStyle(selectedBlockId, { [property]: value });
+    }
+  };
+
   const renderCanvasContent = () => (
     <div className="space-y-6">
       {contentBlocks.map((block) => {
@@ -235,16 +288,16 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
           <div
             key={block.id}
             style={block.style}
-            className={`cursor-pointer rounded transition-all ${
-              isSelected 
+            className={`${viewMode === 'edit' ? 'cursor-pointer' : ''} rounded transition-all ${
+              isSelected && viewMode === 'edit'
                 ? "outline outline-2 outline-primary bg-primary/5" 
-                : "hover:outline hover:outline-2 hover:outline-primary/50"
+                : viewMode === 'edit' ? "hover:outline hover:outline-2 hover:outline-primary/50" : ""
             }`}
-            onClick={() => handleBlockClick(block.id)}
-            onDoubleClick={() => handleBlockDoubleClick(block.id)}
+            onClick={() => viewMode === 'edit' && handleBlockClick(block.id)}
+            onDoubleClick={() => viewMode === 'edit' && handleBlockDoubleClick(block.id)}
           >
             {block.type === 'text' && (
-              isEditing ? (
+              isEditing && viewMode === 'edit' ? (
                 <textarea
                   value={block.content}
                   onChange={(e) => updateContentBlock(block.id, e.target.value)}
@@ -268,7 +321,7 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
               )
             )}
             {block.type === 'section' && (
-              isEditing ? (
+              isEditing && viewMode === 'edit' ? (
                 <input
                   type="text"
                   value={block.content}
@@ -297,7 +350,7 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
                 <Image className="h-8 w-8 text-muted-foreground" />
               </div>
             )}
-            {isSelected && (
+            {isSelected && viewMode === 'edit' && (
               <div className="absolute top-0 right-0 -mt-2 -mr-2">
                 <div className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
                   {isEditing ? "Editing" : "Selected"}
@@ -439,7 +492,7 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handlePreview} data-testid="button-preview">
             <Eye className="h-4 w-4 mr-2" />
-            Preview
+            {viewMode === 'preview' ? 'Edit' : 'Preview'}
           </Button>
           <Button 
             onClick={handleSave} 
@@ -480,19 +533,39 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
                 <CardTitle className="text-sm">Content Blocks</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button variant="outline" className="w-full justify-start text-sm h-8" data-testid="button-add-header">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start text-sm h-8" 
+                  data-testid="button-add-header"
+                  onClick={() => addContentBlock('section', 'New Header', { fontSize: '24px', fontWeight: 'bold', marginBottom: '10px' })}
+                >
                   <Plus className="h-3 w-3 mr-2" />
                   Header
                 </Button>
-                <Button variant="outline" className="w-full justify-start text-sm h-8" data-testid="button-add-paragraph">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start text-sm h-8" 
+                  data-testid="button-add-paragraph"
+                  onClick={() => addContentBlock('text', 'Click to edit this text...', { fontSize: '16px', lineHeight: '1.6', marginBottom: '15px' })}
+                >
                   <Plus className="h-3 w-3 mr-2" />
                   Paragraph
                 </Button>
-                <Button variant="outline" className="w-full justify-start text-sm h-8" data-testid="button-add-image">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start text-sm h-8" 
+                  data-testid="button-add-image"
+                  onClick={() => addContentBlock('image', '', { width: '100%', height: '200px', marginBottom: '15px' })}
+                >
                   <Plus className="h-3 w-3 mr-2" />
                   Image
                 </Button>
-                <Button variant="outline" className="w-full justify-start text-sm h-8" data-testid="button-add-gallery">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start text-sm h-8" 
+                  data-testid="button-add-gallery"
+                  onClick={() => addContentBlock('image', '', { width: '100%', height: '150px', marginBottom: '15px' })}
+                >
                   <Plus className="h-3 w-3 mr-2" />
                   Gallery
                 </Button>
@@ -509,41 +582,154 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
         </div>
 
         {/* Right Sidebar - Properties */}
-        <div className="w-80 border-l bg-card">
-          <div className="p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Settings className="h-4 w-4" />
-              <h3 className="font-heading font-semibold">Properties</h3>
+        {viewMode === 'edit' && (
+          <div className="w-80 border-l bg-card">
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Settings className="h-4 w-4" />
+                <h3 className="font-heading font-semibold">Properties</h3>
+              </div>
+              
+              {selectedBlock ? (
+                <div className="space-y-4">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm">
+                        {selectedBlock.type === 'text' ? 'Text Properties' : 
+                         selectedBlock.type === 'section' ? 'Header Properties' : 'Image Properties'}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {(selectedBlock.type === 'text' || selectedBlock.type === 'section') && (
+                        <>
+                          <div>
+                            <Label htmlFor="font-size" className="text-xs">Font Size</Label>
+                            <Input 
+                              id="font-size" 
+                              value={selectedBlock.style?.fontSize || ''}
+                              onChange={(e) => handlePropertyChange('fontSize', e.target.value)}
+                              placeholder="16px" 
+                              className="h-8" 
+                              data-testid="input-font-size" 
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="text-color" className="text-xs">Color</Label>
+                            <Input 
+                              id="text-color" 
+                              value={selectedBlock.style?.color || ''}
+                              onChange={(e) => handlePropertyChange('color', e.target.value)}
+                              placeholder="#000000" 
+                              className="h-8" 
+                              data-testid="input-text-color" 
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="font-weight" className="text-xs">Font Weight</Label>
+                            <select
+                              id="font-weight"
+                              value={selectedBlock.style?.fontWeight || 'normal'}
+                              onChange={(e) => handlePropertyChange('fontWeight', e.target.value)}
+                              className="w-full h-8 px-2 border border-input rounded-md bg-background"
+                              data-testid="select-font-weight"
+                            >
+                              <option value="normal">Normal</option>
+                              <option value="bold">Bold</option>
+                              <option value="600">Semi Bold</option>
+                              <option value="300">Light</option>
+                            </select>
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="text-align" className="text-xs">Text Align</Label>
+                            <select
+                              id="text-align"
+                              value={selectedBlock.style?.textAlign || 'left'}
+                              onChange={(e) => handlePropertyChange('textAlign', e.target.value)}
+                              className="w-full h-8 px-2 border border-input rounded-md bg-background"
+                              data-testid="select-text-align"
+                            >
+                              <option value="left">Left</option>
+                              <option value="center">Center</option>
+                              <option value="right">Right</option>
+                              <option value="justify">Justify</option>
+                            </select>
+                          </div>
+                        </>
+                      )}
+                      
+                      <div>
+                        <Label htmlFor="text-content" className="text-xs">Content</Label>
+                        <Textarea 
+                          id="text-content"
+                          value={selectedBlock.content || ''}
+                          onChange={(e) => handlePropertyChange('content', e.target.value)}
+                          placeholder="Enter content..."
+                          className="resize-none h-20"
+                          data-testid="textarea-content"
+                        />
+                      </div>
+                      
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => deleteContentBlock(selectedBlockId!)}
+                          data-testid="button-delete-block"
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Delete
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => {
+                            const blockIndex = contentBlocks.findIndex(b => b.id === selectedBlockId);
+                            if (blockIndex > 0) {
+                              const newBlocks = [...contentBlocks];
+                              [newBlocks[blockIndex], newBlocks[blockIndex - 1]] = [newBlocks[blockIndex - 1], newBlocks[blockIndex]];
+                              setContentBlocks(newBlocks);
+                            }
+                          }}
+                          data-testid="button-move-up"
+                        >
+                          <ArrowUp className="h-3 w-3 mr-1" />
+                          Up
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => {
+                            const blockIndex = contentBlocks.findIndex(b => b.id === selectedBlockId);
+                            if (blockIndex < contentBlocks.length - 1) {
+                              const newBlocks = [...contentBlocks];
+                              [newBlocks[blockIndex], newBlocks[blockIndex + 1]] = [newBlocks[blockIndex + 1], newBlocks[blockIndex]];
+                              setContentBlocks(newBlocks);
+                            }
+                          }}
+                          data-testid="button-move-down"
+                        >
+                          <ArrowDown className="h-3 w-3 mr-1" />
+                          Down
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground py-8">
+                  <Settings className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Select a content block to edit its properties</p>
+                </div>
+              )}
             </div>
-            
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Text Properties</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="font-size" className="text-xs">Font Size</Label>
-                  <Input id="font-size" placeholder="16px" className="h-8" data-testid="input-font-size" />
-                </div>
-                
-                <div>
-                  <Label htmlFor="text-color" className="text-xs">Color</Label>
-                  <Input id="text-color" placeholder="#000000" className="h-8" data-testid="input-text-color" />
-                </div>
-                
-                <div>
-                  <Label htmlFor="text-content" className="text-xs">Content</Label>
-                  <Textarea 
-                    id="text-content"
-                    placeholder="Enter text content..."
-                    className="resize-none h-20"
-                    data-testid="textarea-content"
-                  />
-                </div>
-              </CardContent>
-            </Card>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
