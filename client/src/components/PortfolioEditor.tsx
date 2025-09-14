@@ -15,7 +15,8 @@ import {
   Settings,
   Trash2,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Home
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +24,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Portfolio, InsertPortfolio } from "@shared/schema";
 import { getTemplateById, getAllTemplates, type ContentBlock, type TemplateConfig } from "@/lib/templates";
 import A4Canvas from "./A4Canvas";
+import { useLocation } from "wouter";
 
 // ContentBlock interface is now imported from templates
 
@@ -47,6 +49,7 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   // Load existing portfolio if editing
   const { data: portfolio, isLoading } = useQuery<Portfolio>({
@@ -101,8 +104,8 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
         title: "Thành công",
         description: "Portfolio đã được tạo thành công",
       });
-      // Update URL to edit mode
-      window.history.pushState(null, "", `/editor/${newPortfolio.id}`);
+      // Navigate to edit mode using wouter
+      setLocation(`/editor/${newPortfolio.id}`);
       queryClient.invalidateQueries({ queryKey: ["/api/portfolios"] });
     },
     onError: () => {
@@ -233,7 +236,7 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
   };
 
   const handleBack = () => {
-    window.location.href = "/";
+    setLocation("/");
   };
 
   // Function to update content block
@@ -373,6 +376,10 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
+            <Button variant="ghost" size="sm" onClick={() => setLocation("/")} data-testid="button-home-create">
+              <Home className="h-4 w-4 mr-2" />
+              Dashboard
+            </Button>
             <h1 className="font-heading text-xl font-semibold">Tạo Portfolio Mới</h1>
           </div>
         </div>
@@ -468,6 +475,10 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
+          <Button variant="ghost" size="sm" onClick={() => setLocation("/")} data-testid="button-home">
+            <Home className="h-4 w-4 mr-2" />
+            Dashboard
+          </Button>
           
           <div className="flex items-center gap-2">
             <Label htmlFor="portfolio-title" className="sr-only">Portfolio Title</Label>
@@ -531,6 +542,9 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm">Content Blocks</CardTitle>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Click để thêm các thành phần vào portfolio của bạn. Sau khi thêm, click vào thành phần để chỉnh sửa thuộc tính.
+                </p>
               </CardHeader>
               <CardContent className="space-y-2">
                 <Button 
