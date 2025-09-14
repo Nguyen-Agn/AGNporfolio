@@ -34,9 +34,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/portfolios/:id', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const portfolio = await storage.getPortfolio(req.params.id);
       if (!portfolio) {
         return res.status(404).json({ message: "Portfolio not found" });
+      }
+      // Verify ownership
+      if (portfolio.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
       }
       res.json(portfolio);
     } catch (error) {
@@ -59,7 +64,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/portfolios/:id', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const portfolioData = insertPortfolioSchema.partial().parse(req.body);
+      
+      // First check if portfolio exists and user owns it
+      const existingPortfolio = await storage.getPortfolio(req.params.id);
+      if (!existingPortfolio) {
+        return res.status(404).json({ message: "Portfolio not found" });
+      }
+      if (existingPortfolio.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
       const portfolio = await storage.updatePortfolio(req.params.id, portfolioData);
       if (!portfolio) {
         return res.status(404).json({ message: "Portfolio not found" });
@@ -73,6 +89,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/portfolios/:id', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      
+      // First check if portfolio exists and user owns it
+      const existingPortfolio = await storage.getPortfolio(req.params.id);
+      if (!existingPortfolio) {
+        return res.status(404).json({ message: "Portfolio not found" });
+      }
+      if (existingPortfolio.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
       const success = await storage.deletePortfolio(req.params.id);
       if (!success) {
         return res.status(404).json({ message: "Portfolio not found" });

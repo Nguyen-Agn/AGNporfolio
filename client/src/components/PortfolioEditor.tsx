@@ -33,6 +33,8 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
   const [isCreating, setIsCreating] = useState(!portfolioId);
   const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]);
   const [currentTemplate, setCurrentTemplate] = useState<TemplateConfig | null>(null);
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -107,6 +109,31 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
       });
     },
   });
+
+  // Update portfolio mutation  
+  const updateMutation = useMutation({
+    mutationFn: async (data: Partial<InsertPortfolio>) => {
+      if (!portfolioId) throw new Error("No portfolio ID provided");
+      const response = await apiRequest("PUT", `/api/portfolios/${portfolioId}`, data);
+      const portfolio = await response.json();
+      return portfolio as Portfolio;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Đã lưu",
+        description: "Thay đổi đã được lưu thành công",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolios", portfolioId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolios"] });
+    },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể lưu thay đổi. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    },
+  });
   
   // Content blocks are now managed by template system
 
@@ -147,7 +174,19 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
   };
 
   const handleSave = () => {
-    console.log("Portfolio saved");
+    if (!portfolio || isCreating) {
+      console.warn("Cannot save: portfolio not loaded or in creation mode");
+      return;
+    }
+    
+    const updateData: Partial<InsertPortfolio> = {
+      content: {
+        blocks: contentBlocks,
+        template: portfolio.template
+      }
+    };
+    
+    updateMutation.mutate(updateData);
   };
 
   const handlePreview = () => {
@@ -158,24 +197,116 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
     window.location.href = "/";
   };
 
+  // Function to update content block
+  const updateContentBlock = (blockId: string, newContent: string) => {
+    setContentBlocks(prev => 
+      prev.map(block => 
+        block.id === blockId ? { ...block, content: newContent } : block
+      )
+    );
+  };
+
+  // Function to handle block click
+  const handleBlockClick = (blockId: string) => {
+    setSelectedBlockId(blockId);
+    if (blockId !== editingBlockId) {
+      setEditingBlockId(null); // Stop editing other blocks
+    }
+  };
+
+  // Function to start editing a block
+  const handleBlockDoubleClick = (blockId: string) => {
+    setEditingBlockId(blockId);
+    setSelectedBlockId(blockId);
+  };
+
+  // Function to stop editing
+  const handleStopEditing = () => {
+    setEditingBlockId(null);
+  };
+
   const renderCanvasContent = () => (
     <div className="space-y-6">
-      {contentBlocks.map((block) => (
-        <div
-          key={block.id}
-          style={block.style}
-          className="cursor-pointer hover:outline hover:outline-2 hover:outline-primary/50 rounded"
-          onClick={() => console.log(`Block ${block.id} selected`)}
-        >
-          {block.type === 'text' && <div>{block.content}</div>}
-          {block.type === 'section' && <h2>{block.content}</h2>}
-          {block.type === 'image' && (
-            <div className="w-full h-32 bg-muted rounded flex items-center justify-center">
-              <Image className="h-8 w-8 text-muted-foreground" />
-            </div>
-          )}
-        </div>
-      ))}
+      {contentBlocks.map((block) => {
+        const isSelected = selectedBlockId === block.id;
+        const isEditing = editingBlockId === block.id;
+        
+        return (
+          <div
+            key={block.id}
+            style={block.style}
+            className={`cursor-pointer rounded transition-all ${
+              isSelected 
+                ? "outline outline-2 outline-primary bg-primary/5" 
+                : "hover:outline hover:outline-2 hover:outline-primary/50"
+            }`}
+            onClick={() => handleBlockClick(block.id)}
+            onDoubleClick={() => handleBlockDoubleClick(block.id)}
+          >
+            {block.type === 'text' && (
+              isEditing ? (
+                <textarea
+                  value={block.content}
+                  onChange={(e) => updateContentBlock(block.id, e.target.value)}
+                  onBlur={handleStopEditing}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleStopEditing();
+                    }
+                    if (e.key === 'Escape') {
+                      handleStopEditing();
+                    }
+                  }}
+                  className="w-full min-h-[3rem] p-2 border-0 bg-transparent resize-none focus:outline-none"
+                  style={block.style}
+                  autoFocus
+                  data-testid={`input-edit-text-${block.id}`}
+                />
+              ) : (
+                <div data-testid={`text-block-${block.id}`}>{block.content}</div>
+              )
+            )}
+            {block.type === 'section' && (
+              isEditing ? (
+                <input
+                  type="text"
+                  value={block.content}
+                  onChange={(e) => updateContentBlock(block.id, e.target.value)}
+                  onBlur={handleStopEditing}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleStopEditing();
+                    }
+                    if (e.key === 'Escape') {
+                      handleStopEditing();
+                    }
+                  }}
+                  className="w-full p-1 border-0 bg-transparent focus:outline-none"
+                  style={block.style}
+                  autoFocus
+                  data-testid={`input-edit-section-${block.id}`}
+                />
+              ) : (
+                <h2 data-testid={`section-block-${block.id}`}>{block.content}</h2>
+              )
+            )}
+            {block.type === 'image' && (
+              <div className="w-full h-32 bg-muted rounded flex items-center justify-center" data-testid={`image-block-${block.id}`}>
+                <Image className="h-8 w-8 text-muted-foreground" />
+              </div>
+            )}
+            {isSelected && (
+              <div className="absolute top-0 right-0 -mt-2 -mr-2">
+                <div className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
+                  {isEditing ? "Editing" : "Selected"}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 
@@ -310,9 +441,13 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
             <Eye className="h-4 w-4 mr-2" />
             Preview
           </Button>
-          <Button onClick={handleSave} data-testid="button-save">
+          <Button 
+            onClick={handleSave} 
+            data-testid="button-save"
+            disabled={updateMutation.isPending || (!portfolio || isCreating)}
+          >
             <Save className="h-4 w-4 mr-2" />
-            Save
+            {updateMutation.isPending ? "Đang lưu..." : "Lưu"}
           </Button>
         </div>
       </div>
