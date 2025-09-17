@@ -9,7 +9,7 @@ export default function LoginPage({onSwitch}:{onSwitch: ()=> void}) {
 
   const onSubmit = async (data: any) => {
     try {
-      const res = await fetch("http://localhost:3000/api/auth/login", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include", // để cookie session lưu lại
