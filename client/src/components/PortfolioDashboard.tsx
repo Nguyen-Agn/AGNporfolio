@@ -24,6 +24,10 @@ export default function PortfolioDashboard() {
   // Fetch portfolios from API
   const { data: portfolios = [], isLoading } = useQuery<Portfolio[]>({
     queryKey: ["/api/portfolios/a"],
+    queryFn: async () => {
+    const res = await apiRequest("GET", "/api/portfolios/a");
+    return res.json() as Promise<Portfolio[]>;
+  },
   });
 
   // Delete portfolio mutation

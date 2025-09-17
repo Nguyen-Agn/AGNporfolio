@@ -8,6 +8,7 @@ import { getTemplateById, type ContentBlock } from "@/lib/templates";
 import { exportToPDF } from "@/lib/print";
 import A4Canvas from "@/components/A4Canvas";
 import { useState, useEffect } from "react";
+import { apiRequest } from "@/lib/queryClient";
 
 /**
  * Portfolio View Page - Displays portfolio in read-only mode
@@ -22,6 +23,10 @@ export default function PortfolioView() {
   // Fetch portfolio data
   const { data: portfolio, isLoading, error } = useQuery<Portfolio>({
     queryKey: [`/api/portfolios/s/${id}`],
+    queryFn: async () => {
+    const res = await apiRequest("GET", `/api/portfolios/s/${id}`);
+    return res.json() as Promise<Portfolio>;
+    },
     enabled: !!id,
   });
 

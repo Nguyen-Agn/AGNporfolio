@@ -63,8 +63,13 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
   // Load existing portfolio if editing
   const { data: portfolio, isLoading, error } = useQuery<Portfolio>({
   queryKey: [`/api/portfolios/s/${portfolioId}`],
+  queryFn: async () => {
+    const res = await apiRequest("GET", `/api/portfolios/s/${portfolioId}`);
+    return res.json() as Promise<Portfolio>;
+  },
   enabled: !!portfolioId,
 });
+
 
 
   
