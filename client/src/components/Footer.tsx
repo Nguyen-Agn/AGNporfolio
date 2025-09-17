@@ -1,4 +1,4 @@
-import logoUrl from "@assets/logoX16_1757816161143.png";
+import logoUrl from "@/asset/logoX16.png";
 
 export default function Footer() {
   return (

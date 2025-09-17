@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import ThemeToggle from "./ThemeToggle";
 import { LogOut, Plus, Folder, Edit3 } from "lucide-react";
-import logoUrl from "@assets/logoX16_1757816161143.png";
+import logoUrl from "@/asset/logoX16.png";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
