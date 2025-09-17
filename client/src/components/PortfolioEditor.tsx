@@ -25,16 +25,18 @@ import { apiRequest } from "@/lib/queryClient";
 import { exportToPDFWithPreview } from "@/lib/print";
 import type { Portfolio, InsertPortfolio } from "@shared/schema";
 import { getTemplateById, getAllTemplates, type ContentBlock, type TemplateConfig } from "@/lib/templates";
-import A4Canvas from "./A4Canvas";
+import A4Canvas from "@/components/A4Canvas";
 import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 
 // ContentBlock interface is now imported from templates
-
 interface PortfolioEditorProps {
   portfolioId?: string;
 }
-
+// khai báo biến
 export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
+  const { toast } = useToast();
+  const {user} = useAuth();
   // UI State Management
   const [selectedTool, setSelectedTool] = useState<string | null>(null); // Currently selected design tool
   const [zoom, setZoom] = useState(100); // Canvas zoom level (25% - 200%)
@@ -55,16 +57,16 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
     description: "",
     template: "default"
   });
-  
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
   // Load existing portfolio if editing
-  const { data: portfolio, isLoading } = useQuery<Portfolio>({
-    queryKey: ["/api/portfolios", portfolioId],
-    enabled: !!portfolioId,
-  });
+  const { data: portfolio, isLoading, error } = useQuery<Portfolio>({
+  queryKey: [`/api/portfolios/s/${portfolioId}`],
+  enabled: !!portfolioId,
+});
+
+
   
   // Load template content when template changes
   useEffect(() => {
@@ -103,19 +105,20 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
   // Create portfolio mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertPortfolio) => {
-      const response = await apiRequest("POST", "/api/portfolios", data);
+      const response = await apiRequest("POST",`/api/portfolios`, data);
       const portfolio = await response.json();
       return portfolio as Portfolio;
     },
     onSuccess: (newPortfolio: any) => {
+      setLocation(`/editor/${newPortfolio._id}`);
       setIsCreating(false);
       toast({
         title: "Thành công",
         description: "Portfolio đã được tạo thành công",
       });
       // Navigate to edit mode using wouter
-      setLocation(`/editor/${newPortfolio.id}`);
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolios"] });
+
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolios/s/${portfolioId}`] });
     },
     onError: () => {
       toast({
@@ -128,19 +131,20 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
 
   // Update portfolio mutation  
   const updateMutation = useMutation({
-    mutationFn: async (data: Partial<InsertPortfolio>) => {
-      if (!portfolioId) throw new Error("No portfolio ID provided");
-      const response = await apiRequest("PUT", `/api/portfolios/${portfolioId}`, data);
-      const portfolio = await response.json();
-      return portfolio as Portfolio;
-    },
+      mutationFn: async (data: Partial<InsertPortfolio>) => {
+    if (!portfolioId) throw new Error("No portfolio ID provided");
+    const response = await apiRequest("PUT", `/api/portfolios/${portfolioId}`, data);
+    if (!response.ok) throw new Error("Failed to update portfolio");
+    return (await response.json()) as Portfolio;
+  },
+
     onSuccess: () => {
       toast({
         title: "Đã lưu",
         description: "Thay đổi đã được lưu thành công",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolios", portfolioId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolios"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/portfolios/s/${portfolioId}`] });
+      
     },
     onError: () => {
       toast({
@@ -218,6 +222,7 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+ 
     if (!formData.title.trim()) {
       toast({
         title: "Lỗi",
@@ -229,13 +234,14 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
     
     const portfolioData: InsertPortfolio = {
       title: formData.title,
+      userId: user!.id || "",
       description: formData.description || undefined,
       template: formData.template,
       content: {
         blocks: contentBlocks,
         template: formData.template
       },
-      isPublished: "false"
+      isPublished: false
     };
     
     createMutation.mutate(portfolioData);
@@ -263,8 +269,9 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
     setSelectedBlockId(null);
   };
 
-  const handleBack = () => {
-    setLocation("/");
+  const handleBack = async () => {
+    setLocation("/home");
+    queryClient.invalidateQueries({ queryKey: ["/api/portfolios/a"] });
   };
 
   /**
@@ -506,6 +513,8 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
     );
   }
   
+
+
   // Show editor UI for editing mode
   return (
     <div className="h-screen flex flex-col">
@@ -563,13 +572,20 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar - Tools */}
-        <div className="w-80 border-r bg-card no-print">
+        <div className="w-80 border-r bg-card no-print overflow-scroll">
           <div className="p-4">
             <h3 className="font-heading font-semibold mb-4">Design Tools</h3>
             
             {/* Tool Palette */}
-            <div className="space-y-2 mb-6">
-              {tools.map((tool) => (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Content Blocks</CardTitle>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Không hoạt động
+                </p>
+              </CardHeader>
+              <CardContent>
+              {/*tools.map((tool) => (
                 <Button
                   key={tool.id}
                   variant={selectedTool === tool.id ? "default" : "outline"}
@@ -580,18 +596,20 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
                   <tool.icon className="h-4 w-4 mr-2" />
                   {tool.label}
                 </Button>
-              ))}
-            </div>
+              ))*/}
+              </CardContent>
+            </Card>
 
             {/* Content Library */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm">Content Blocks</CardTitle>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Click để thêm các thành phần vào portfolio của bạn. Sau khi thêm, click vào thành phần để chỉnh sửa thuộc tính.
+                  Click để thêm các thành phần vào portfolio của bạn.
                 </p>
               </CardHeader>
               <CardContent className="space-y-2">
+                {/*Header*/}
                 <Button 
                   variant="outline" 
                   className="w-full justify-start text-sm h-8" 
@@ -601,6 +619,7 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
                   <Plus className="h-3 w-3 mr-2" />
                   Header
                 </Button>
+                {/*Paragraph*/}
                 <Button 
                   variant="outline" 
                   className="w-full justify-start text-sm h-8" 
@@ -610,6 +629,7 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
                   <Plus className="h-3 w-3 mr-2" />
                   Paragraph
                 </Button>
+                {/*Image*/}
                 <Button 
                   variant="outline" 
                   className="w-full justify-start text-sm h-8" 
@@ -619,37 +639,10 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
                   <Plus className="h-3 w-3 mr-2" />
                   Image
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start text-sm h-8" 
-                  data-testid="button-add-gallery"
-                  onClick={() => addContentBlock('image', '', { width: '100%', height: '150px', marginBottom: '15px' })}
-                >
-                  <Plus className="h-3 w-3 mr-2" />
-                  Gallery
-                </Button>
               </CardContent>
             </Card>
-          </div>
-        </div>
 
-        {/* Center - Canvas */}
-        <div className="flex-1 print-area">
-          <A4Canvas zoom={zoom} onZoomChange={setZoom}>
-            {renderCanvasContent()}
-          </A4Canvas>
-        </div>
-
-        {/* Right Sidebar - Properties */}
-        {viewMode === 'edit' && (
-          <div className="w-80 border-l bg-card no-print">
-            <div className="p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Settings className="h-4 w-4" />
-                <h3 className="font-heading font-semibold">Properties</h3>
-              </div>
-              
-              {selectedBlock ? (
+            {selectedBlock ? (
                 <div className="space-y-4">
                   <Card>
                     <CardHeader className="pb-3">
@@ -786,9 +779,19 @@ export default function PortfolioEditor({ portfolioId }: PortfolioEditorProps) {
                   <p className="text-sm">Select a content block to edit its properties</p>
                 </div>
               )}
-            </div>
           </div>
-        )}
+        </div>
+
+
+
+
+        {/* Center - Canvas */}
+        <div className="flex-1 print-area">
+          <A4Canvas zoom={zoom} onZoomChange={setZoom}>
+            {renderCanvasContent()}
+          </A4Canvas>
+        </div>
+
       </div>
     </div>
   );

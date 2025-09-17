@@ -21,12 +21,12 @@ export default function LandingPage() {
     {
       icon: Share2,
       title: "Chia Sẻ Dễ Dàng",
-      description: "Chia sẻ portfolio của bạn chỉ với một liên kết đơn giản. Hoàn hảo cho việc xin việc, thuyết trình khách hàng."
+      description: "Chia sẻ portfolio của bạn chỉ với một liên kết đơn giản."
     },
     {
       icon: Zap,
       title: "Nhanh Chóng & Trực Quan",
-      description: "Giao diện kéo thả giúp việc tạo portfolio nhanh chóng và thú vị. Không cần kinh nghiệm thiết kế."
+      description: "Giao diện Đơn giản giúp việc tạo portfolio nhanh chóng và thú vị. Không cần kinh nghiệm thiết kế."
     }
   ];
 
@@ -70,8 +70,8 @@ export default function LandingPage() {
                 <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-primary/20 flex items-center justify-center">
                   <span className="text-3xl">👩‍🎨</span>
                 </div>
-                <h3 className="font-heading text-2xl font-bold mb-2">Sarah Johnson</h3>
-                <p className="text-muted-foreground mb-4">Creative Designer</p>
+                <h3 className="font-heading text-2xl font-bold mb-2">Thanh Nguyen</h3>
+                <p className="text-muted-foreground mb-4">Creative Designer/Developer</p>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="space-y-2">
                     <h4 className="font-semibold">Skills</h4>
@@ -100,7 +100,7 @@ export default function LandingPage() {
           <div className="text-center mb-12">
             <h2 className="font-heading text-3xl font-bold mb-4">Mọi Thứ Bạn Cần</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Nền tảng của chúng tôi cung cấp tất cả các công cụ bạn cần để tạo portfolio tuyệt đẹp nổi bật.
+              Nền tảng của minnhf cung cấp các công cụ bạn cần để tạo portfolio tuyệt đẹp nổi bật.
             </p>
           </div>
           
@@ -127,7 +127,7 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 text-center">
           <h2 className="font-heading text-3xl font-bold mb-4">Sẵn Sàng Tạo Portfolio?</h2>
           <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-            Tham gia cùng hàng nghìn người sáng tạo tin tưởng nền tảng của chúng tôi để thể hiện tác phẩm tốt nhất.
+            Tham gia cùng những người sáng tạo tin tưởng nền tảng của mình để thể hiện tác phẩm tốt nhất.
           </p>
           <Button 
             size="lg" 

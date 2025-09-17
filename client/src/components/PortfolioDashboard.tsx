@@ -12,7 +12,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { Portfolio, InsertPortfolio } from "@shared/schema";
+import type { Portfolio } from "@shared/schema";
 import { useLocation } from "wouter";
 
 export default function PortfolioDashboard() {
@@ -23,16 +23,16 @@ export default function PortfolioDashboard() {
 
   // Fetch portfolios from API
   const { data: portfolios = [], isLoading } = useQuery<Portfolio[]>({
-    queryKey: ["/api/portfolios"],
+    queryKey: ["/api/portfolios/a"],
   });
 
   // Delete portfolio mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest(`/api/portfolios/${id}`, "DELETE");
+      await apiRequest("DELETE",`/api/portfolios/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolios"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolios/a"] });
       toast({
         title: "Thành công",
         description: "Portfolio đã được xóa thành công",
@@ -47,41 +47,7 @@ export default function PortfolioDashboard() {
     },
   });
 
-  // Duplicate portfolio mutation
-  const duplicateMutation = useMutation({
-    mutationFn: async (id: string) => {
-      // First fetch the original portfolio
-      const response = await apiRequest(`/api/portfolios/${id}`, "GET");
-      const original = await response.json() as Portfolio;
-      
-      // Create duplicate data
-      const duplicateData: InsertPortfolio = {
-        title: `Bản sao - ${original.title}`,
-        description: original.description,
-        content: original.content as any,
-        template: original.template,
-        isPublished: "false"
-      };
-      
-      // Create the duplicate
-      const createResponse = await apiRequest("POST", "/api/portfolios", duplicateData);
-      return await createResponse.json() as Portfolio;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolios"] });
-      toast({
-        title: "Thành công",
-        description: "Portfolio đã được sao chép thành công",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Lỗi",
-        description: "Không thể sao chép portfolio. Vui lòng thử lại.",
-        variant: "destructive",
-      });
-    },
-  });
+
 
   const filteredPortfolios = portfolios.filter(portfolio =>
     portfolio.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -103,17 +69,9 @@ export default function PortfolioDashboard() {
     return date.toLocaleDateString("vi-VN");
   };
 
-  const handleCreateNew = () => {
-    window.location.href = "/editor";
-  };
+const handleCreateNew = () => setLocation("/editor");
+const handleEdit = (id: string) => setLocation(`/editor/${id}`);
 
-  const handleEdit = (id: string) => {
-    window.location.href = `/editor/${id}`;
-  };
-
-  const handleDuplicate = (id: string) => {
-    duplicateMutation.mutate(id);
-  };
 
   const handleDelete = (id: string) => {
     if (confirm("Bạn có chắc chắn muốn xóa portfolio này?")) {
@@ -190,8 +148,8 @@ export default function PortfolioDashboard() {
         </Card>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPortfolios.map((portfolio) => (
-            <Card key={portfolio.id} className="hover-elevate cursor-pointer group">
+          {filteredPortfolios.map((portfolio,idx) => (
+            <Card key={idx} className="hover-elevate cursor-pointer group">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
@@ -201,27 +159,23 @@ export default function PortfolioDashboard() {
                   
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" data-testid={`button-portfolio-menu-${portfolio.id}`}>
+                      <Button variant="ghost" size="icon" data-testid={`button-portfolio-menu-${portfolio._id}`}>
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleView(portfolio.id)} data-testid={`menu-view-${portfolio.id}`}>
+                      <DropdownMenuItem onClick={() => handleView(portfolio._id)} data-testid={`menu-view-${portfolio._id}`}>
                         <Eye className="h-4 w-4 mr-2" />
                         Xem
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEdit(portfolio.id)} data-testid={`menu-edit-${portfolio.id}`}>
+                      <DropdownMenuItem onClick={() => handleEdit(portfolio._id)} data-testid={`menu-edit-${portfolio._id}`}>
                         <Edit className="h-4 w-4 mr-2" />
                         Chỉnh Sửa
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDuplicate(portfolio.id)} data-testid={`menu-duplicate-${portfolio.id}`}>
-                        <Copy className="h-4 w-4 mr-2" />
-                        Sao Chép
-                      </DropdownMenuItem>
                       <DropdownMenuItem 
-                        onClick={() => handleDelete(portfolio.id)} 
+                        onClick={() => handleDelete(portfolio._id)} 
                         className="text-destructive"
-                        data-testid={`menu-delete-${portfolio.id}`}
+                        data-testid={`menu-delete-${portfolio._id}`}
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
                         Xóa
@@ -240,9 +194,9 @@ export default function PortfolioDashboard() {
                   <span>Sửa đổi {formatDate(portfolio.updatedAt || portfolio.createdAt || "")}</span>
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${
-                      portfolio.isPublished === 'true' ? 'bg-green-500' : 'bg-yellow-500'
+                      portfolio.isPublished? 'bg-green-500' : 'bg-yellow-500'
                     }`} />
-                    <span>{portfolio.isPublished === 'true' ? 'Đã xuất bản' : 'Bản nháp'}</span>
+                    <span>{portfolio.isPublished? 'Đã xuất bản' : 'Bản nháp'}</span>
                   </div>
                 </div>
                 
@@ -251,8 +205,8 @@ export default function PortfolioDashboard() {
                     variant="outline" 
                     size="sm" 
                     className="flex-1"
-                    onClick={() => handleView(portfolio.id)}
-                    data-testid={`button-view-${portfolio.id}`}
+                    onClick={() => handleView(portfolio._id)}
+                    data-testid={`button-view-${portfolio._id}`}
                   >
                     <Eye className="h-3 w-3 mr-1" />
                     Xem
@@ -260,8 +214,8 @@ export default function PortfolioDashboard() {
                   <Button 
                     size="sm" 
                     className="flex-1"
-                    onClick={() => handleEdit(portfolio.id)}
-                    data-testid={`button-edit-${portfolio.id}`}
+                    onClick={() => handleEdit(portfolio._id)}
+                    data-testid={`button-edit-${portfolio._id}`}
                   >
                     <Edit className="h-3 w-3 mr-1" />
                     Sửa

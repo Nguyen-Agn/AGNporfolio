@@ -21,12 +21,13 @@ export default function PortfolioView() {
 
   // Fetch portfolio data
   const { data: portfolio, isLoading, error } = useQuery<Portfolio>({
-    queryKey: ["/api/portfolios", id],
+    queryKey: [`/api/portfolios/s/${id}`],
     enabled: !!id,
   });
 
   // Load portfolio content when portfolio is loaded
   useEffect(() => {
+    console.log(portfolio, isLoading, error)
     if (portfolio) {
       try {
         const portfolioContent = portfolio.content as any;
@@ -47,7 +48,7 @@ export default function PortfolioView() {
 
   // Navigation handlers
   const handleBack = () => {
-    setLocation("/");
+    setLocation("/home");
   };
 
   /**
@@ -131,7 +132,7 @@ export default function PortfolioView() {
           
           <div className="flex items-center gap-2">
             <h1 className="font-heading text-xl font-semibold">{portfolio.title}</h1>
-            {portfolio.isPublished === 'true' && (
+            {portfolio.isPublished === true && (
               <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
                 Đã xuất bản
               </span>
@@ -150,7 +151,7 @@ export default function PortfolioView() {
           </Button>
           <Button 
             variant="outline" 
-            onClick={() => setLocation(`/editor/${portfolio.id}`)}
+            onClick={() => setLocation(`/editor/${portfolio._id}`)}
             data-testid="button-edit-from-view"
           >
             Chỉnh sửa

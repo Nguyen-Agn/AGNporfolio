@@ -1,62 +1,32 @@
-import { sql } from 'drizzle-orm';
-import {
-  index,
-  jsonb,
-  pgTable,
-  timestamp,
-  varchar,
-  text,
-} from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
+export type Portfolio = {
+  _id: string;   // giữ nguyên
+  userId: string;
+  title: string;
+  description?: string;
+  content: Record<string, any>;
+  template: string;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
 
-// Session storage table.
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
-export const sessions = pgTable(
-  "sessions",
-  {
-    sid: varchar("sid").primaryKey(),
-    sess: jsonb("sess").notNull(),
-    expire: timestamp("expire").notNull(),
-  },
-  (table) => [index("IDX_session_expire").on(table.expire)],
-);
+export type User = {
+  _id: string;   // giữ nguyên
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  profileImageUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
-// User storage table.
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+export type InsertPortfolio = {
+  userId: string;
+  title: string;
+  description?: string;
+  content?: Record<string, any>;
+  template?: string;
+  isPublished?: boolean;
+};
 
-// Portfolio storage table
-export const portfolios = pgTable("portfolios", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  title: text("title").notNull(),
-  description: text("description"),
-  content: jsonb("content").notNull().default('{}'),
-  template: varchar("template").default('default'),
-  isPublished: varchar("is_published").default('false'),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export type UpsertUser = typeof users.$inferInsert;
-export type User = typeof users.$inferSelect;
-
-export const insertPortfolioSchema = createInsertSchema(portfolios).pick({
-  title: true,
-  description: true,
-  content: true,
-  template: true,
-  isPublished: true,
-});
-
-export type InsertPortfolio = z.infer<typeof insertPortfolioSchema>;
-export type Portfolio = typeof portfolios.$inferSelect;
+export type UserMin = { id: string; email: string }

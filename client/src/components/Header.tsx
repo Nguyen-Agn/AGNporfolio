@@ -8,8 +8,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import ThemeToggle from "./ThemeToggle";
-import { LogOut, Plus, Folder } from "lucide-react";
+import { LogOut, Plus, Folder, Edit3 } from "lucide-react";
 import logoUrl from "@assets/logoX16_1757816161143.png";
+import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 interface HeaderProps {
   isAuthenticated?: boolean;
@@ -22,26 +26,55 @@ interface HeaderProps {
 }
 
 export default function Header({ isAuthenticated, user }: HeaderProps) {
+  const [,setLocation] = useLocation();
+  const {toast} = useToast();
   const handleLogin = () => {
-    window.location.href = "/api/login";
+    setLocation("/signup")
   };
+  const queryClient = useQueryClient();
+  const logoutMutation = useMutation({
+  mutationFn: async () => {
+    await apiRequest("POST", "/api/auth/logout");
+  },
+  onSuccess: () => {
+    localStorage.removeItem("token"); 
+    queryClient.clear();      // clear toàn bộ cache
+    toast({
+      title: "Đã đăng xuất",
+      description: "Hẹn gặp lại bạn!",
+    });
+    setLocation("/signup");    // điều hướng
+  },
+  onError: () => {
+    toast({
+      title: "Lỗi",
+      description: "Không thể đăng xuất. Vui lòng thử lại.",
+      variant: "destructive",
+    });
+  },
+  });
 
   const handleLogout = () => {
-    window.location.href = "/api/logout";
+    logoutMutation.mutate();
   };
 
+  // tạo tên ban đầu
   const getUserInitials = () => {
     if (user?.firstName && user?.lastName) {
       return `${user.firstName[0]}${user.lastName[0]}`;
     } else if (user?.email) {
       return user.email[0].toUpperCase();
     }
-    return "U";
+    return "You";
   };
+  const handleHome = () => {
+    setLocation("/home");
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        
         <Link href="/" data-testid="link-home">
           <div className="flex items-center space-x-3">
             <img src={logoUrl} alt="@GN Logo" className="h-8 w-8" />
@@ -54,9 +87,9 @@ export default function Header({ isAuthenticated, user }: HeaderProps) {
           
           {isAuthenticated ? (
             <>
-              <Button variant="default" size="sm" data-testid="button-new-portfolio">
-                <Plus className="h-4 w-4 mr-2" />
-                Tạo Portfolio Mới
+              <Button variant="default" size="sm" data-testid="button-new-portfolio" onClick={handleHome}>
+                <Edit3 className="h-4 w-4 mr-2" />
+                Profile
               </Button>
               
               <DropdownMenu>
